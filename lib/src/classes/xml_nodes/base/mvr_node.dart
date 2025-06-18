@@ -1,4 +1,5 @@
 import 'package:mvr/src/classes/xml_nodes/aux_data.dart';
+import 'package:mvr/src/classes/xml_nodes/base/unsupported_node.dart';
 import 'package:mvr/src/classes/xml_nodes/child_list.dart';
 import 'package:mvr/src/classes/xml_nodes/classing.dart';
 import 'package:mvr/src/classes/xml_nodes/fixture.dart';
@@ -6,6 +7,7 @@ import 'package:mvr/src/classes/xml_nodes/general_scene_description.dart';
 import 'package:mvr/src/classes/xml_nodes/layer.dart';
 import 'package:mvr/src/classes/xml_nodes/layers.dart';
 import 'package:mvr/src/classes/xml_nodes/scene.dart';
+import 'package:mvr/src/classes/xml_nodes/scene_object.dart';
 import 'package:mvr/src/classes/xml_nodes/user_data.dart';
 import 'package:mvr/src/classes/xml_nodes/value_containers/mappings.dart';
 import 'package:mvr/src/classes/xml_nodes/value_nodes/addesses.dart';
@@ -50,7 +52,8 @@ abstract class MVRNode {
       'Matrix' => MatrixValueNode.from(element),
       'Classing' => ClassingNode.from(element),
       'Color' => ColorValueNode.from(element),
-      _ => throw UnimplementedError('Tag = <${element.name.local}/>'),
+      'SceneObject' => SceneObjectNode.from(element),
+      _ => UnsupportedNode.from(element),
     };
   }
 

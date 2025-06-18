@@ -42,7 +42,7 @@ class MVRMatrix {
 
     return MVRMatrix(
       rows
-          .map((row) => row.map((value) => double.parse(value)).toList())
+          .map((row) => row.map((value) => double.tryParse(value)).nonNulls.toList())
           .toList(),
     );
   }

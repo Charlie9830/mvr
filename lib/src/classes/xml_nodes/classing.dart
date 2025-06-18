@@ -6,7 +6,7 @@ class ClassingNode extends Relationship {
 
   factory ClassingNode.from(XmlElement element) {
     return ClassingNode(
-      uuid: element.getAttribute('uuid')!,
+      uuid: element.getAttribute('uuid') ?? '',
       name: element.getAttribute('name') ?? '',
     );
   }
