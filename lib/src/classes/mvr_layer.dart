@@ -12,17 +12,18 @@ class MVRLayer {
   MVRLayer({required this.uuid, this.name = '', this.fixtures = const []});
 
   factory MVRLayer.fromNode(LayerNode node) {
+    final childListNode = node.children.whereType<ChildListNode>().firstOrNull;
+
     return MVRLayer(
       uuid: node.uuid,
       name: node.name,
       fixtures:
-          node.children
-              .whereType<ChildListNode>()
-              .first
-              .children
-              .whereType<FixtureNode>()
-              .map((fixtureNode) => MVRFixture.fromNode(fixtureNode))
-              .toList(),
+          childListNode == null
+              ? []
+              : childListNode.children
+                  .whereType<FixtureNode>()
+                  .map((fixtureNode) => MVRFixture.fromNode(fixtureNode))
+                  .toList(),
     );
   }
 }
