@@ -3,7 +3,9 @@ import 'package:mvr/src/classes/mvr_addresses.dart';
 import 'package:mvr/src/classes/xml_nodes/base/mvr_node.dart';
 import 'package:mvr/src/classes/xml_nodes/base/mvr_value_container.dart';
 import 'package:mvr/src/classes/xml_nodes/base/mvr_value_node.dart';
+import 'package:mvr/src/classes/xml_nodes/child_list.dart';
 import 'package:mvr/src/classes/xml_nodes/fixture.dart';
+import 'package:mvr/src/classes/xml_nodes/group_object.dart';
 import 'package:mvr/src/classes/xml_nodes/value_nodes/addesses.dart';
 import 'package:mvr/src/classes/xml_nodes/value_nodes/cast_shadow.dart';
 import 'package:mvr/src/classes/xml_nodes/value_nodes/child_position.dart';
@@ -19,7 +21,9 @@ import 'package:mvr/src/classes/xml_nodes/value_nodes/matrix.dart';
 import 'package:mvr/src/classes/xml_nodes/value_nodes/position_reference.dart';
 import 'package:mvr/src/classes/xml_nodes/value_nodes/unit_number.dart';
 
-class MVRFixture {
+sealed class MVRGraphicObject {}
+
+class MVRFixture extends MVRGraphicObject {
   final String uuid;
   final String name;
   final String multipatch;
@@ -206,6 +210,35 @@ class MVRFixture {
       unitNumber: unitNumber ?? this.unitNumber,
       childPosition: childPosition ?? this.childPosition,
       addresses: addresses ?? this.addresses,
+    );
+  }
+}
+
+class MVRGroupObject extends MVRGraphicObject {
+  final String uuid;
+  final String name;
+
+  final List<MVRFixture> fixtures;
+
+  MVRGroupObject({
+    required this.uuid,
+    required this.name,
+    required this.fixtures,
+  });
+
+  factory MVRGroupObject.fromNode(GroupObjectNode node) {
+    final childListNode = node.children.whereType<ChildListNode>().firstOrNull;
+
+    return MVRGroupObject(
+      uuid: node.uuid,
+      name: node.name,
+      fixtures:
+          childListNode == null
+              ? []
+              : childListNode.children
+                  .whereType<FixtureNode>()
+                  .map((fixtureNode) => MVRFixture.fromNode(fixtureNode))
+                  .toList(),
     );
   }
 }

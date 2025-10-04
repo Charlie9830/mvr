@@ -1,7 +1,9 @@
 import 'dart:io';
 
+import 'package:collection/collection.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mvr/errors/file_not_found_error.dart';
+import 'package:mvr/src/classes/mvr_graphic_objects.dart';
 import 'package:mvr/src/mvr_main.dart';
 
 import '../test_parameters/test_parameters.dart';
@@ -112,7 +114,7 @@ void main() async {
 
         expect(
           mvr.generalSceneDescription.layers
-              .expand((layer) => layer.fixtures)
+              .expand((layer) => layer.children)
               .length,
           generalMvrTestParameters.totalFixtureCount,
           reason: 'Qty of Fixtures does not match the expected ammout.',
@@ -126,7 +128,8 @@ void main() async {
 
       expect(
         mvr.generalSceneDescription.layers
-            .expand((layer) => layer.fixtures)
+            .expand((layer) => layer.children)
+            .whereType<MVRFixture>()
             .map((fix) => fix.uuid)
             .toSet()
             .length,
@@ -141,7 +144,8 @@ void main() async {
 
       expect(
         mvr.generalSceneDescription.layers
-            .expand((layer) => layer.fixtures)
+            .expand((layer) => layer.children)
+            .whereType<MVRFixture>()
             .map((fix) => fix.fixtureId)
             .toSet()
             .length,
@@ -156,7 +160,8 @@ void main() async {
 
       expect(
         mvr.generalSceneDescription.layers
-            .expand((layer) => layer.fixtures)
+            .expand((layer) => layer.children)
+            .whereType<MVRFixture>()
             .map((fix) => fix.addresses.singleGlobalAddress ?? 0)
             .toSet()
             .length,
@@ -171,7 +176,8 @@ void main() async {
 
       expect(
         mvr.generalSceneDescription.layers
-            .expand((layer) => layer.fixtures)
+            .expand((layer) => layer.children)
+            .whereType<MVRFixture>()
             .map((fix) => fix.gdtfSpec)
             .toSet()
             .length,
@@ -187,7 +193,8 @@ void main() async {
 
       final fixture =
           mvr.generalSceneDescription.layers
-              .expand((layer) => layer.fixtures)
+              .expand((layer) => layer.children)
+              .whereType<MVRFixture>()
               .first;
 
       expect(
@@ -212,6 +219,46 @@ void main() async {
       );
       expect(fixture.unitNumber, 0, reason: 'Unexpected UnitNumber');
       expect(fixture.castShadow, false, reason: 'Unexpected GdtfSpec');
+    });
+  });
+
+  group("Test Parsing of Groups", () {
+    test("Testing Fixture Grouping Functionality", () async {
+      final mvr = MVR(filePath: groupingGsdTestParams.filePath);
+      await mvr.read(expandGdtfFiles: false);
+
+      final layerCount = mvr.generalSceneDescription.layers.length;
+
+      expect(layerCount, 1, reason: 'Unexpected Layer Count');
+
+      final groups =
+          mvr.generalSceneDescription.layers.first.children
+              .whereType<MVRGroupObject>();
+
+      expect(groups.length, 3, reason: 'Unexpected Group count');
+
+      final allFixtures =
+          groups.map((group) => group.fixtures).flattened.toList();
+
+      expect(
+        allFixtures.length,
+        groupingGsdTestParams.totalFixtureCount,
+        reason: 'Unexpected total count of fixtures',
+      );
+
+      final fixturesByGroupId = groups.groupListsBy((group) => group.uuid);
+
+      expect(
+        fixturesByGroupId.keys.length,
+        3,
+        reason: 'Unexpected unique list of Group Ids',
+      );
+
+      expect(
+        fixturesByGroupId.values.first.first.fixtures.length,
+        8,
+        reason: 'Unpexcted qty of fixtures in first group',
+      );
     });
   });
 }

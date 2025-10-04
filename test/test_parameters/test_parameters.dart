@@ -19,8 +19,19 @@ final generalGsdTestParams = GeneralSceneDescriptionTestParameters(
 
 final generalMvrTestParameters = MVRFileTestParameters(
   filePath: p.join(Directory.current.path, 'test_files', 'general.mvr'),
-  invalidFilePath: p.join(Directory.current.path, 'test_files', 'not_a_proper_mvr_file.mvr'),
+  invalidFilePath: p.join(
+    Directory.current.path,
+    'test_files',
+    'not_a_proper_mvr_file.mvr',
+  ),
   gdtfFileCount: 8,
   layerCount: 12,
   totalFixtureCount: 283,
+);
+
+final groupingGsdTestParams = GroupingTestParameters(
+  filePath: p.join(Directory.current.path, 'test_files', 'grouping.mvr'),
+  groupCount: 3,
+  totalFixtureCount: 24,
+  groupFixtureCount: 8,
 );

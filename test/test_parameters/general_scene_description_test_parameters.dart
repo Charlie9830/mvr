@@ -24,3 +24,17 @@ class GeneralSceneDescriptionTestParameters {
     return await File(testFilePath).readAsString();
   }
 }
+
+class GroupingTestParameters {
+  final int groupCount;
+  final int totalFixtureCount;
+  final int groupFixtureCount;
+  final String filePath;
+
+  GroupingTestParameters({
+    required this.filePath,
+    required this.groupCount,
+    required this.totalFixtureCount,
+    required this.groupFixtureCount,
+  });
+}

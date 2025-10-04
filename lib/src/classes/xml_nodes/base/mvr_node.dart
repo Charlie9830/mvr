@@ -4,6 +4,7 @@ import 'package:mvr/src/classes/xml_nodes/child_list.dart';
 import 'package:mvr/src/classes/xml_nodes/classing.dart';
 import 'package:mvr/src/classes/xml_nodes/fixture.dart';
 import 'package:mvr/src/classes/xml_nodes/general_scene_description.dart';
+import 'package:mvr/src/classes/xml_nodes/group_object.dart';
 import 'package:mvr/src/classes/xml_nodes/layer.dart';
 import 'package:mvr/src/classes/xml_nodes/layers.dart';
 import 'package:mvr/src/classes/xml_nodes/scene.dart';
@@ -35,6 +36,7 @@ abstract class MVRNode {
       'Layers' => LayersNode.from(element),
       'ChildList' => ChildListNode.from(element),
       'Fixture' => FixtureNode.from(element),
+      'GroupObject' => GroupObjectNode.from(element),
       'UserData' => UserDataNode.from(element),
       'Layer' => LayerNode.from(element),
       'GDTFSpec' => GDTFSpecValueNode.from(element),
