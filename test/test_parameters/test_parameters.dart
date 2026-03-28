@@ -35,3 +35,7 @@ final groupingGsdTestParams = GroupingTestParameters(
   totalFixtureCount: 24,
   groupFixtureCount: 8,
 );
+
+final matrixTestParams = MatrixTestParameters(
+  filePath: p.join(Directory.current.path, 'test_files', 'matrix_test.mvr'),
+);

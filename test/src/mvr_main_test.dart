@@ -261,4 +261,38 @@ void main() async {
       );
     });
   });
+
+  group("Test implementation of Matrix Node", () {
+    test("Testing Matrix node parsing.", () async {
+      final mvr = MVR(filePath: matrixTestParams.filePath);
+      await mvr.read(expandGdtfFiles: false);
+
+      final fixture =
+          mvr.generalSceneDescription.layers.first.children.first as MVRFixture;
+
+      final matrix = fixture.matrix;
+
+      // Translation
+      expect(matrix.x, 1000, reason: 'Unexpected X coordinate');
+      expect(matrix.y, 2000, reason: 'Unpexted Y coordinate');
+      expect(matrix.z, 3000, reason: 'Unpexted Y coordinate');
+
+      // Rotation
+      expect(
+        matrix.rotationX,
+        10.999982306986784,
+        reason: 'Unexpected X Rotation value',
+      );
+      expect(
+        matrix.rotationY,
+        12.000018110598107,
+        reason: 'Unexpected Y Rotation value',
+      );
+      expect(
+        matrix.rotationZ,
+        12.999977520549043,
+        reason: 'Unexpected Z Rotation value',
+      );
+    });
+  });
 }

@@ -38,3 +38,9 @@ class GroupingTestParameters {
     required this.groupFixtureCount,
   });
 }
+
+class MatrixTestParameters {
+  final String filePath;
+
+  MatrixTestParameters({required this.filePath});
+}
