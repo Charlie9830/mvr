@@ -5,6 +5,7 @@ import 'package:mvr/src/classes/xml_nodes/general_scene_description.dart';
 import 'package:mvr/src/classes/xml_nodes/layer.dart';
 import 'package:mvr/src/classes/xml_nodes/layers.dart';
 import 'package:mvr/src/classes/xml_nodes/scene.dart';
+import 'package:mvr/src/context.dart';
 
 import 'package:xml/xml.dart';
 
@@ -25,9 +26,9 @@ class MVRGeneralSceneDescription {
     this.providerVersion = '',
   });
 
-  static MVRGeneralSceneDescription fromNode(GeneralSceneDescriptionNode gsd) {
+  static MVRGeneralSceneDescription build(Context ctx) {
     final layersNode =
-        gsd.children
+        ctx.gsdNode.children
             .whereType<SceneNode>()
             .first
             .children
@@ -35,14 +36,14 @@ class MVRGeneralSceneDescription {
             .first;
 
     return MVRGeneralSceneDescription(
-      mvrMajorVersion: gsd.verMajor,
-      mvrMinorVersion: gsd.verMinor,
-      provider: gsd.provider,
-      providerVersion: gsd.providerVersion,
+      mvrMajorVersion: ctx.gsdNode.verMajor,
+      mvrMinorVersion: ctx.gsdNode.verMinor,
+      provider: ctx.gsdNode.provider,
+      providerVersion: ctx.gsdNode.providerVersion,
       layers:
           layersNode.children
               .whereType<LayerNode>()
-              .map((layerNode) => MVRLayer.fromNode(layerNode))
+              .map((layerNode) => MVRLayer.fromNode(ctx, layerNode))
               .toList(),
     );
   }

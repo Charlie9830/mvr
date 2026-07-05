@@ -1,14 +1,19 @@
-import 'package:mvr/src/classes/xml_nodes/aux_data.dart';
+import 'package:mvr/src/classes/xml_nodes/symbol_node.dart';
+import 'package:mvr/src/classes/xml_nodes/aux_data_node.dart';
 import 'package:mvr/src/classes/xml_nodes/base/unsupported_node.dart';
 import 'package:mvr/src/classes/xml_nodes/child_list.dart';
 import 'package:mvr/src/classes/xml_nodes/classing.dart';
 import 'package:mvr/src/classes/xml_nodes/fixture.dart';
 import 'package:mvr/src/classes/xml_nodes/general_scene_description.dart';
+import 'package:mvr/src/classes/xml_nodes/geometries_node.dart';
+import 'package:mvr/src/classes/xml_nodes/geometry_3d.dart';
 import 'package:mvr/src/classes/xml_nodes/group_object.dart';
 import 'package:mvr/src/classes/xml_nodes/layer.dart';
 import 'package:mvr/src/classes/xml_nodes/layers.dart';
 import 'package:mvr/src/classes/xml_nodes/scene.dart';
 import 'package:mvr/src/classes/xml_nodes/scene_object.dart';
+import 'package:mvr/src/classes/xml_nodes/symdef_node.dart';
+import 'package:mvr/src/classes/xml_nodes/truss_node.dart';
 import 'package:mvr/src/classes/xml_nodes/user_data.dart';
 import 'package:mvr/src/classes/xml_nodes/value_containers/mappings.dart';
 import 'package:mvr/src/classes/xml_nodes/value_nodes/addesses.dart';
@@ -55,6 +60,11 @@ abstract class MVRNode {
       'Classing' => ClassingNode.from(element),
       'Color' => ColorValueNode.from(element),
       'SceneObject' => SceneObjectNode.from(element),
+      'Truss' => TrussNode.from(element),
+      'Symdef' => SymdefNode.from(element),
+      'Geometry3D' => Geometry3dNode.from(element),
+      'Geometries' => GeometriesNode.from(element),
+      'Symbol' => SymbolNode.from(element),
       _ => UnsupportedNode.from(element),
     };
   }

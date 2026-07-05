@@ -44,3 +44,37 @@ class MatrixTestParameters {
 
   MatrixTestParameters({required this.filePath});
 }
+
+class TrussTestParameters {
+  final String filePath;
+
+  /// Total number of layers in the scene.
+  final int layerCount;
+
+  /// Number of `Truss` graphic objects across all layers.
+  final int trussCount;
+
+  /// Name shared by both trusses in the file.
+  final String trussName;
+
+  /// UUIDs of the two trusses, in document order.
+  final List<String> trussUuids;
+
+  /// Expected resolved size of each truss (derived from the largest referenced
+  /// glb). Length maps from glb width, width from glb depth, height from glb
+  /// height.
+  final double expectedLength;
+  final double expectedWidth;
+  final double expectedHeight;
+
+  TrussTestParameters({
+    required this.filePath,
+    required this.layerCount,
+    required this.trussCount,
+    required this.trussName,
+    required this.trussUuids,
+    required this.expectedLength,
+    required this.expectedWidth,
+    required this.expectedHeight,
+  });
+}
