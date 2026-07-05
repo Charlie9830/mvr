@@ -116,7 +116,7 @@ void main() {
         },
         glbs: {
           // width -> length, depth -> width, height -> height.
-          'truss': GLB(fileId: 'truss', width: 3000, height: 290, depth: 290),
+          'truss': GLB.sized(fileId: 'truss', width: 3000, height: 290, depth: 290),
         },
       );
 
@@ -133,7 +133,8 @@ void main() {
           'symdef-a': ['models/nested/truss_2m.glb'],
         },
         glbs: {
-          'truss_2m': GLB(fileId: 'truss_2m', width: 2000, height: 200, depth: 200),
+          'truss_2m':
+              GLB.sized(fileId: 'truss_2m', width: 2000, height: 200, depth: 200),
         },
       );
 
@@ -142,33 +143,63 @@ void main() {
       expect(truss.length, 2000);
     });
 
-    test('Picks the largest glb by volume when several are referenced', () {
+    test('Combines several glbs into the union of their bounds', () {
+      // A larger glb that fully contains a smaller one: the union equals the
+      // outer extent.
       final ctx = buildContext(
         symdefs: {
           'symdef-a': ['small.glb', 'large.glb'],
         },
         glbs: {
-          'small': GLB(fileId: 'small', width: 10, height: 10, depth: 10),
-          'large': GLB(fileId: 'large', width: 100, height: 100, depth: 100),
+          'small': GLB.sized(fileId: 'small', width: 10, height: 10, depth: 10),
+          'large': GLB.sized(fileId: 'large', width: 100, height: 100, depth: 100),
         },
       );
 
       final truss = MVRTruss.fromNode(ctx, trussNode(symdefIds: ['symdef-a']));
 
-      expect(truss.length, 100, reason: 'The largest-volume glb should win');
+      expect(truss.length, 100);
       expect(truss.width, 100);
       expect(truss.height, 100);
     });
 
-    test('Aggregates geometry across multiple symbols/symdefs', () {
+    test('Union spans beyond any single glb when geometry is offset', () {
+      // Two 1m boxes sitting end to end along X (X in [0,1] and [2,3]). The
+      // union spans X in [0,3] -> length 3, larger than either piece alone.
+      final ctx = buildContext(
+        symdefs: {
+          'symdef-a': ['left.glb', 'right.glb'],
+        },
+        glbs: {
+          'left': GLB(
+            fileId: 'left',
+            minX: 0, minY: 0, minZ: 0,
+            maxX: 1, maxY: 1, maxZ: 1,
+          ),
+          'right': GLB(
+            fileId: 'right',
+            minX: 2, minY: 0, minZ: 0,
+            maxX: 3, maxY: 1, maxZ: 1,
+          ),
+        },
+      );
+
+      final truss = MVRTruss.fromNode(ctx, trussNode(symdefIds: ['symdef-a']));
+
+      expect(truss.length, 3, reason: 'Union along X should span [0, 3]');
+      expect(truss.width, 1);
+      expect(truss.height, 1);
+    });
+
+    test('Unions geometry across multiple symbols/symdefs', () {
       final ctx = buildContext(
         symdefs: {
           'symdef-a': ['a.glb'],
           'symdef-b': ['b.glb'],
         },
         glbs: {
-          'a': GLB(fileId: 'a', width: 10, height: 10, depth: 10),
-          'b': GLB(fileId: 'b', width: 500, height: 20, depth: 20),
+          'a': GLB.sized(fileId: 'a', width: 10, height: 10, depth: 10),
+          'b': GLB.sized(fileId: 'b', width: 500, height: 20, depth: 20),
         },
       );
 
@@ -177,7 +208,44 @@ void main() {
         trussNode(symdefIds: ['symdef-a', 'symdef-b']),
       );
 
-      expect(truss.length, 500, reason: 'Largest glb across both symdefs');
+      expect(truss.length, 500, reason: 'Union length across both symdefs');
+      expect(truss.width, 20);
+      expect(truss.height, 20);
+    });
+
+    test('Ignores invalid glbs when computing the union', () {
+      final ctx = buildContext(
+        symdefs: {
+          'symdef-a': ['broken.glb', 'good.glb'],
+        },
+        glbs: {
+          'broken': GLB.invalid(fileId: 'broken'),
+          'good': GLB.sized(fileId: 'good', width: 40, height: 50, depth: 60),
+        },
+      );
+
+      final truss = MVRTruss.fromNode(ctx, trussNode(symdefIds: ['symdef-a']));
+
+      expect(truss.length, 40);
+      expect(truss.width, 60);
+      expect(truss.height, 50);
+    });
+
+    test('Returns zero size when every referenced glb is invalid', () {
+      final ctx = buildContext(
+        symdefs: {
+          'symdef-a': ['broken.glb'],
+        },
+        glbs: {
+          'broken': GLB.invalid(fileId: 'broken'),
+        },
+      );
+
+      final truss = MVRTruss.fromNode(ctx, trussNode(symdefIds: ['symdef-a']));
+
+      expect(truss.length, 0);
+      expect(truss.width, 0);
+      expect(truss.height, 0);
     });
   });
 

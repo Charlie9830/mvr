@@ -98,22 +98,50 @@ GLB _buildGLB(String id, ByteData data) {
   String jsonString = utf8.decode(jsonBytes);
   Map<String, dynamic> gltf = json.decode(jsonString);
 
-  // 4. Find the first mesh's position accessor
-  // Usually: meshes[0] -> primitives[0] -> attributes['POSITION']
+  // 4. Union the POSITION bounds of every mesh primitive.
+  // Each primitive's accessor exposes a pre-computed min/max
+  // (attributes['POSITION'] -> accessors[i].min / .max).
   try {
-    final int positionAccessorIndex =
-        gltf['meshes'][0]['primitives'][0]['attributes']['POSITION'];
-    final accessor = gltf['accessors'][positionAccessorIndex];
+    double? minX, minY, minZ, maxX, maxY, maxZ;
 
-    List<dynamic> min = accessor['min']; // [minX, minY, minZ]
-    List<dynamic> max = accessor['max']; // [maxX, maxY, maxZ]
+    for (final mesh in (gltf['meshes'] as List)) {
+      for (final primitive in (mesh['primitives'] as List)) {
+        final accessor =
+            gltf['accessors'][primitive['attributes']['POSITION']];
 
-    double width = (max[0] - min[0]).toDouble();
-    double height = (max[1] - min[1]).toDouble();
-    double depth = (max[2] - min[2]).toDouble();
+        final List<dynamic> min = accessor['min']; // [minX, minY, minZ]
+        final List<dynamic> max = accessor['max']; // [maxX, maxY, maxZ]
 
-    return GLB(fileId: id, depth: depth, height: height, width: width);
+        minX = _min(minX, min[0].toDouble());
+        minY = _min(minY, min[1].toDouble());
+        minZ = _min(minZ, min[2].toDouble());
+        maxX = _max(maxX, max[0].toDouble());
+        maxY = _max(maxY, max[1].toDouble());
+        maxZ = _max(maxZ, max[2].toDouble());
+      }
+    }
+
+    if (minX == null) {
+      // No mesh primitives with position data.
+      return GLB.invalid(fileId: id);
+    }
+
+    return GLB(
+      fileId: id,
+      minX: minX,
+      minY: minY!,
+      minZ: minZ!,
+      maxX: maxX!,
+      maxY: maxY!,
+      maxZ: maxZ!,
+    );
   } catch (e) {
     return GLB.invalid(fileId: id);
   }
 }
+
+double _min(double? current, double value) =>
+    current == null || value < current ? value : current;
+
+double _max(double? current, double value) =>
+    current == null || value > current ? value : current;

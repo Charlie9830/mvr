@@ -49,7 +49,8 @@ final trussTestParams = TrussTestParameters(
     '58988FB5-1579-4376-B320-946DDAFFC957',
     '2E4D5C5E-5D63-4840-8A04-357F08E56B4B',
   ],
-  // Both trusses reference the same symdef; its largest glb measures
+  // Both trusses reference the same symdef. The union of its geometry (a main
+  // beam plus two smaller connectors fully contained within it) measures
   // width 2.4892, height 0.3810, depth 0.6098 (metres).
   expectedLength: 2.4891990423202515,
   expectedWidth: 0.6097999811172485,

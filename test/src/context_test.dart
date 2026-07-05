@@ -177,7 +177,7 @@ void main() {
     });
 
     test('Retains the supplied glbs map', () {
-      final glb = GLB(fileId: 'truss', width: 1, height: 2, depth: 3);
+      final glb = GLB.sized(fileId: 'truss', width: 1, height: 2, depth: 3);
       final ctx = Context(glbs: {'truss': glb}, gsdNode: gsdWithScene([]));
 
       expect(ctx.glbs['truss'], same(glb));

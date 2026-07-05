@@ -60,9 +60,9 @@ class TrussTestParameters {
   /// UUIDs of the two trusses, in document order.
   final List<String> trussUuids;
 
-  /// Expected resolved size of each truss (derived from the largest referenced
-  /// glb). Length maps from glb width, width from glb depth, height from glb
-  /// height.
+  /// Expected resolved size of each truss (the union bounding box of all
+  /// referenced glb geometry). Length maps from the union's X extent, width
+  /// from Z, height from Y.
   final double expectedLength;
   final double expectedWidth;
   final double expectedHeight;

@@ -1,13 +1,9 @@
-import 'dart:io';
 import 'package:mvr/src/classes/mvr_layer.dart';
 import 'package:mvr/src/classes/mvr_user_data.dart';
-import 'package:mvr/src/classes/xml_nodes/general_scene_description.dart';
 import 'package:mvr/src/classes/xml_nodes/layer.dart';
 import 'package:mvr/src/classes/xml_nodes/layers.dart';
 import 'package:mvr/src/classes/xml_nodes/scene.dart';
 import 'package:mvr/src/context.dart';
-
-import 'package:xml/xml.dart';
 
 class MVRGeneralSceneDescription {
   final int mvrMajorVersion;

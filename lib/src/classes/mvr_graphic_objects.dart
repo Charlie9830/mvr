@@ -1,16 +1,15 @@
+import 'dart:math' as math;
+
 import 'package:collection/collection.dart';
 import 'package:mvr/src/classes/mvr_addresses.dart';
-import 'package:mvr/src/classes/xml_nodes/aux_data_node.dart';
 import 'package:mvr/src/classes/xml_nodes/base/mvr_node.dart';
 import 'package:mvr/src/classes/xml_nodes/base/mvr_value_container.dart';
 import 'package:mvr/src/classes/xml_nodes/base/mvr_value_node.dart';
 import 'package:mvr/src/classes/xml_nodes/child_list.dart';
 import 'package:mvr/src/classes/xml_nodes/fixture.dart';
 import 'package:mvr/src/classes/xml_nodes/geometries_node.dart';
-import 'package:mvr/src/classes/xml_nodes/geometry_3d.dart';
 import 'package:mvr/src/classes/xml_nodes/group_object.dart';
 import 'package:mvr/src/classes/xml_nodes/symbol_node.dart';
-import 'package:mvr/src/classes/xml_nodes/symdef_node.dart';
 import 'package:mvr/src/classes/xml_nodes/truss_node.dart';
 import 'package:mvr/src/classes/xml_nodes/value_nodes/addesses.dart';
 import 'package:mvr/src/classes/xml_nodes/value_nodes/cast_shadow.dart';
@@ -343,15 +342,24 @@ class MVRTruss extends MVRGraphicObject {
         glbFileNames
             .map((fileName) => ctx.glbs[p.basenameWithoutExtension(fileName)])
             .nonNulls
+            .where((glb) => glb.valid)
             .toList();
 
     if (glbs.isEmpty) {
       return (0, 0, 0);
     }
 
-    final largest = glbs.sortedBy((glb) => glb.volume).last;
+    // A truss can reference several geometry files (e.g. a main beam plus end
+    // connectors). Combine them into a single axis-aligned bounding box so the
+    // reported size represents the union of all geometry, not just one piece.
+    final minX = glbs.map((glb) => glb.minX).reduce(math.min);
+    final minY = glbs.map((glb) => glb.minY).reduce(math.min);
+    final minZ = glbs.map((glb) => glb.minZ).reduce(math.min);
+    final maxX = glbs.map((glb) => glb.maxX).reduce(math.max);
+    final maxY = glbs.map((glb) => glb.maxY).reduce(math.max);
+    final maxZ = glbs.map((glb) => glb.maxZ).reduce(math.max);
 
-    // We are converted the Axis here to Length, Width, Height.
-    return (largest.width, largest.depth, largest.height);
+    // Convert the union's axes to Length (X), Width (Z), Height (Y).
+    return (maxX - minX, maxZ - minZ, maxY - minY);
   }
 }
