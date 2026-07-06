@@ -11,6 +11,11 @@ class MatrixValueNode extends MVRValueNode<MVRMatrix> {
   }
 }
 
+// Represents the MVR Matrix Attribute.
+// From the Spec;
+// -- Right-handed
+// -- Z-Up
+// -- 1 Distance Unit equals 1 mm
 class MVRMatrix {
   final List<List<double>> matrix;
 

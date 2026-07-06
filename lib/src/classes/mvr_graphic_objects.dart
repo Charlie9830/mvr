@@ -278,6 +278,13 @@ class MVRTruss extends MVRGraphicObject {
   final double width;
   final double height;
 
+  /// Offset of the geometry's bounding-box centre from the matrix origin, along
+  /// the truss length, width and height axes respectively. Add these (rotated by
+  /// the matrix) to the translation to obtain the geometric centre.
+  final double offsetLength;
+  final double offsetWidth;
+  final double offsetHeight;
+
   MVRTruss({
     required this.uuid,
     required this.name,
@@ -287,10 +294,13 @@ class MVRTruss extends MVRGraphicObject {
     required this.width,
     required this.height,
     required this.length,
+    this.offsetLength = 0,
+    this.offsetWidth = 0,
+    this.offsetHeight = 0,
   });
 
   factory MVRTruss.fromNode(Context ctx, TrussNode node) {
-    final (length, width, height) = _lookupSize(ctx, node);
+    final size = _lookupSize(ctx, node);
 
     return MVRTruss(
       uuid: node.uuid,
@@ -305,21 +315,21 @@ class MVRTruss extends MVRGraphicObject {
         node.children,
         const MVRMatrix.identity(),
       ),
-      length: length,
-      width: width,
-      height: height,
+      length: size.length,
+      width: size.width,
+      height: size.height,
+      offsetLength: size.offsetLength,
+      offsetWidth: size.offsetWidth,
+      offsetHeight: size.offsetHeight,
     );
   }
 
-  static (double length, double width, double height) _lookupSize(
-    Context ctx,
-    TrussNode truss,
-  ) {
+  static _TrussSize _lookupSize(Context ctx, TrussNode truss) {
     final geometriesNode =
         truss.children.whereType<GeometriesNode>().firstOrNull;
 
     if (geometriesNode == null) {
-      return (0, 0, 0);
+      return _TrussSize.zero;
     }
 
     final symDefIds = geometriesNode.children.whereType<SymbolNode>().map(
@@ -335,7 +345,7 @@ class MVRTruss extends MVRGraphicObject {
             .toList();
 
     if (glbFileNames.isEmpty) {
-      return (0, 0, 0);
+      return _TrussSize.zero;
     }
 
     final glbs =
@@ -346,7 +356,7 @@ class MVRTruss extends MVRGraphicObject {
             .toList();
 
     if (glbs.isEmpty) {
-      return (0, 0, 0);
+      return _TrussSize.zero;
     }
 
     // A truss can reference several geometry files (e.g. a main beam plus end
@@ -359,7 +369,50 @@ class MVRTruss extends MVRGraphicObject {
     final maxY = glbs.map((glb) => glb.maxY).reduce(math.max);
     final maxZ = glbs.map((glb) => glb.maxZ).reduce(math.max);
 
-    // Convert the union's axes to Length (X), Width (Z), Height (Y).
-    return (maxX - minX, maxZ - minZ, maxY - minY);
+    // The glb bounds are in glTF space (right-handed, Y-up); MVR is right-handed
+    // Z-up. Map the extents to Length (glTF X), Width (glTF Z) and Height
+    // (glTF Y). The matrix translation locates the geometry's local origin,
+    // which is not generally the bounding-box centre, so also report the centre
+    // offset in MVR truss-local axes for callers to re-anchor to the centre.
+    //
+    // The Y-up -> Z-up conversion is (x, y, z) -> (x, -z, y), so the width axis
+    // (glTF Z) maps to MVR -Y: negate the width offset accordingly.
+    return _TrussSize(
+      length: maxX - minX,
+      width: maxZ - minZ,
+      height: maxY - minY,
+      offsetLength: (minX + maxX) / 2,
+      offsetWidth: -(minZ + maxZ) / 2,
+      offsetHeight: (minY + maxY) / 2,
+    );
   }
+}
+
+/// Resolved physical size of a truss and the offset of its geometry centre from
+/// the matrix origin, both in the (length, width, height) axis convention.
+class _TrussSize {
+  final double length;
+  final double width;
+  final double height;
+  final double offsetLength;
+  final double offsetWidth;
+  final double offsetHeight;
+
+  const _TrussSize({
+    required this.length,
+    required this.width,
+    required this.height,
+    required this.offsetLength,
+    required this.offsetWidth,
+    required this.offsetHeight,
+  });
+
+  static const zero = _TrussSize(
+    length: 0,
+    width: 0,
+    height: 0,
+    offsetLength: 0,
+    offsetWidth: 0,
+    offsetHeight: 0,
+  );
 }
