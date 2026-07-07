@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mvr/src/classes/glb.dart';
 import 'package:mvr/src/classes/mvr_graphic_objects.dart';
@@ -335,6 +337,47 @@ void main() {
       expect(box.length, closeTo(200, 1e-6));
       expect(box.width, closeTo(2000, 1e-6));
       expect(box.height, closeTo(200, 1e-6));
+    });
+
+    test('objectBoundingBox keeps true local extents regardless of rotation',
+        () {
+      // A 45-degree rotation about Z grows the world-aligned box on X and Y,
+      // but the object-space box must still report the truss's real dimensions.
+      final c = math.cos(math.pi / 4);
+      final s = math.sin(math.pi / 4);
+      final matrix = MVRMatrix([
+        [c, s, 0],
+        [-s, c, 0],
+        [0, 0, 1],
+        [0, 0, 0],
+      ]);
+
+      final truss = MVRTruss.fromNode(
+        beamContext(),
+        trussNode(
+          symdefIds: ['symdef-a'],
+          extraChildren: [MatrixValueNode(matrix)],
+        ),
+      );
+
+      // The world box has grown on at least one horizontal axis...
+      expect(truss.boundingBox.length, greaterThan(200 + 1e-3));
+
+      // ...but the object box still reports the true 2000 x 200 x 200 truss.
+      expect(truss.objectBoundingBox.length, closeTo(2000, 1e-6));
+      expect(truss.objectBoundingBox.width, closeTo(200, 1e-6));
+      expect(truss.objectBoundingBox.height, closeTo(200, 1e-6));
+    });
+
+    test('objectBoundingBox is zero when no geometry resolves', () {
+      final truss = MVRTruss.fromNode(
+        buildContext(),
+        trussNode(includeGeometries: false),
+      );
+
+      expect(truss.objectBoundingBox.length, 0);
+      expect(truss.objectBoundingBox.width, 0);
+      expect(truss.objectBoundingBox.height, 0);
     });
   });
 

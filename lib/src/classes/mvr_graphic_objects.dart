@@ -285,6 +285,17 @@ class MVRTruss extends MVRGraphicObject {
   /// eight corners by [matrix], and taking the world-aligned bounds.
   final MVRBoundingBox boundingBox;
 
+  /// The truss geometry's bounding box in its own local (object) space, before
+  /// the [matrix] transform is applied.
+  ///
+  /// Unlike [boundingBox], this is aligned to the truss's own axes, so its
+  /// [MVRBoundingBox.length], [MVRBoundingBox.width] and
+  /// [MVRBoundingBox.height] are the truss's true physical dimensions and do
+  /// not grow when the truss is rotated. Consumers that need the oriented
+  /// footprint (e.g. to draw a rotated rectangle) should combine these local
+  /// extents with [matrix]. Coordinates are in mm (Z-up), matching [matrix].
+  final MVRBoundingBox objectBoundingBox;
+
   MVRTruss({
     required this.uuid,
     required this.name,
@@ -292,6 +303,7 @@ class MVRTruss extends MVRGraphicObject {
     required this.matrix,
     required this.classing,
     required this.boundingBox,
+    required this.objectBoundingBox,
   });
 
   /// The centre of the truss's world-space bounding box (mm).
@@ -322,6 +334,10 @@ class MVRTruss extends MVRGraphicObject {
               : MVRBoundingBox.fromWorldPoints(
                 localCorners.map(matrix.transform),
               ),
+      objectBoundingBox:
+          localCorners.isEmpty
+              ? MVRBoundingBox.zero
+              : MVRBoundingBox.fromWorldPoints(localCorners),
     );
   }
 

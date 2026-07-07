@@ -51,6 +51,19 @@ class MVRMatrix {
   double get rotationZ =>
       math.atan2(matrix[0][1], matrix[0][0]) * 180 / math.pi;
 
+  /// The world-space direction of the local X (length) axis.
+  ///
+  /// This is the image of the local unit X vector under the matrix, i.e. the
+  /// first basis row. It is generally unit-length but may carry scale, so
+  /// callers that need a direction should normalise it.
+  MVRVector3 get xAxis => MVRVector3(matrix[0][0], matrix[0][1], matrix[0][2]);
+
+  /// The world-space direction of the local Y (width) axis.
+  MVRVector3 get yAxis => MVRVector3(matrix[1][0], matrix[1][1], matrix[1][2]);
+
+  /// The world-space direction of the local Z (height) axis.
+  MVRVector3 get zAxis => MVRVector3(matrix[2][0], matrix[2][1], matrix[2][2]);
+
   /// Transforms a point from the matrix's local space into world space.
   ///
   /// The MVR matrix stores the three basis vectors in rows 0-2 and the
