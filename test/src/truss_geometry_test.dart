@@ -71,31 +71,31 @@ TrussNode trussNode({
 
 void main() {
   group('MVRTruss size lookup', () {
-    test('Returns zero size when the truss has no <Geometries/> node', () {
+    test('Returns a zero box when the truss has no <Geometries/> node', () {
       final ctx = buildContext();
       final truss = MVRTruss.fromNode(
         ctx,
         trussNode(includeGeometries: false),
       );
 
-      expect(truss.length, 0);
-      expect(truss.width, 0);
-      expect(truss.height, 0);
+      expect(truss.boundingBox.length, 0);
+      expect(truss.boundingBox.width, 0);
+      expect(truss.boundingBox.height, 0);
     });
 
-    test('Returns zero size when the referenced symdef is not in the lookup', () {
+    test('Returns a zero box when the referenced symdef is not in the lookup', () {
       final ctx = buildContext(); // No symdefs registered.
       final truss = MVRTruss.fromNode(
         ctx,
         trussNode(symdefIds: ['unknown-symdef']),
       );
 
-      expect(truss.length, 0);
-      expect(truss.width, 0);
-      expect(truss.height, 0);
+      expect(truss.boundingBox.length, 0);
+      expect(truss.boundingBox.width, 0);
+      expect(truss.boundingBox.height, 0);
     });
 
-    test('Returns zero size when the glb for the geometry is missing', () {
+    test('Returns a zero box when the glb for the geometry is missing', () {
       final ctx = buildContext(
         symdefs: {
           'symdef-a': ['truss.glb'],
@@ -104,27 +104,31 @@ void main() {
       );
       final truss = MVRTruss.fromNode(ctx, trussNode(symdefIds: ['symdef-a']));
 
-      expect(truss.length, 0);
-      expect(truss.width, 0);
-      expect(truss.height, 0);
+      expect(truss.boundingBox.length, 0);
+      expect(truss.boundingBox.width, 0);
+      expect(truss.boundingBox.height, 0);
     });
 
-    test('Maps glb axes to (length: width, width: depth, height: height)', () {
+    test('Maps glb axes to (length: X, width: Z, height: Y) and mm', () {
       final ctx = buildContext(
         symdefs: {
           'symdef-a': ['truss.glb'],
         },
         glbs: {
-          // width -> length, depth -> width, height -> height.
-          'truss': GLB.sized(fileId: 'truss', width: 3000, height: 290, depth: 290),
+          // glb metres: X -> length, Z -> width, Y -> height. Values are
+          // converted to mm (x1000) to match the MVR specification.
+          'truss': GLB.sized(fileId: 'truss', width: 3, height: 0.29, depth: 0.29),
         },
       );
 
       final truss = MVRTruss.fromNode(ctx, trussNode(symdefIds: ['symdef-a']));
 
-      expect(truss.length, 3000, reason: 'length should map from glb.width');
-      expect(truss.width, 290, reason: 'width should map from glb.depth');
-      expect(truss.height, 290, reason: 'height should map from glb.height');
+      expect(truss.boundingBox.length, closeTo(3000, 1e-6),
+          reason: 'length should map from glb X, in mm');
+      expect(truss.boundingBox.width, closeTo(290, 1e-6),
+          reason: 'width should map from glb Z, in mm');
+      expect(truss.boundingBox.height, closeTo(290, 1e-6),
+          reason: 'height should map from glb Y, in mm');
     });
 
     test('Resolves the glb by the geometry file basename without extension', () {
@@ -134,13 +138,13 @@ void main() {
         },
         glbs: {
           'truss_2m':
-              GLB.sized(fileId: 'truss_2m', width: 2000, height: 200, depth: 200),
+              GLB.sized(fileId: 'truss_2m', width: 2, height: 0.2, depth: 0.2),
         },
       );
 
       final truss = MVRTruss.fromNode(ctx, trussNode(symdefIds: ['symdef-a']));
 
-      expect(truss.length, 2000);
+      expect(truss.boundingBox.length, closeTo(2000, 1e-6));
     });
 
     test('Combines several glbs into the union of their bounds', () {
@@ -151,21 +155,22 @@ void main() {
           'symdef-a': ['small.glb', 'large.glb'],
         },
         glbs: {
-          'small': GLB.sized(fileId: 'small', width: 10, height: 10, depth: 10),
-          'large': GLB.sized(fileId: 'large', width: 100, height: 100, depth: 100),
+          'small': GLB.sized(fileId: 'small', width: 0.01, height: 0.01, depth: 0.01),
+          'large': GLB.sized(fileId: 'large', width: 0.1, height: 0.1, depth: 0.1),
         },
       );
 
       final truss = MVRTruss.fromNode(ctx, trussNode(symdefIds: ['symdef-a']));
 
-      expect(truss.length, 100);
-      expect(truss.width, 100);
-      expect(truss.height, 100);
+      expect(truss.boundingBox.length, closeTo(100, 1e-6));
+      expect(truss.boundingBox.width, closeTo(100, 1e-6));
+      expect(truss.boundingBox.height, closeTo(100, 1e-6));
     });
 
     test('Union spans beyond any single glb when geometry is offset', () {
       // Two 1m boxes sitting end to end along X (X in [0,1] and [2,3]). The
-      // union spans X in [0,3] -> length 3, larger than either piece alone.
+      // union spans X in [0,3] -> length 3 m = 3000 mm, larger than either
+      // piece alone.
       final ctx = buildContext(
         symdefs: {
           'symdef-a': ['left.glb', 'right.glb'],
@@ -186,9 +191,10 @@ void main() {
 
       final truss = MVRTruss.fromNode(ctx, trussNode(symdefIds: ['symdef-a']));
 
-      expect(truss.length, 3, reason: 'Union along X should span [0, 3]');
-      expect(truss.width, 1);
-      expect(truss.height, 1);
+      expect(truss.boundingBox.length, closeTo(3000, 1e-6),
+          reason: 'Union along X should span [0, 3] m');
+      expect(truss.boundingBox.width, closeTo(1000, 1e-6));
+      expect(truss.boundingBox.height, closeTo(1000, 1e-6));
     });
 
     test('Unions geometry across multiple symbols/symdefs', () {
@@ -198,8 +204,8 @@ void main() {
           'symdef-b': ['b.glb'],
         },
         glbs: {
-          'a': GLB.sized(fileId: 'a', width: 10, height: 10, depth: 10),
-          'b': GLB.sized(fileId: 'b', width: 500, height: 20, depth: 20),
+          'a': GLB.sized(fileId: 'a', width: 0.01, height: 0.01, depth: 0.01),
+          'b': GLB.sized(fileId: 'b', width: 0.5, height: 0.02, depth: 0.02),
         },
       );
 
@@ -208,9 +214,10 @@ void main() {
         trussNode(symdefIds: ['symdef-a', 'symdef-b']),
       );
 
-      expect(truss.length, 500, reason: 'Union length across both symdefs');
-      expect(truss.width, 20);
-      expect(truss.height, 20);
+      expect(truss.boundingBox.length, closeTo(500, 1e-6),
+          reason: 'Union length across both symdefs');
+      expect(truss.boundingBox.width, closeTo(20, 1e-6));
+      expect(truss.boundingBox.height, closeTo(20, 1e-6));
     });
 
     test('Ignores invalid glbs when computing the union', () {
@@ -220,18 +227,18 @@ void main() {
         },
         glbs: {
           'broken': GLB.invalid(fileId: 'broken'),
-          'good': GLB.sized(fileId: 'good', width: 40, height: 50, depth: 60),
+          'good': GLB.sized(fileId: 'good', width: 0.04, height: 0.05, depth: 0.06),
         },
       );
 
       final truss = MVRTruss.fromNode(ctx, trussNode(symdefIds: ['symdef-a']));
 
-      expect(truss.length, 40);
-      expect(truss.width, 60);
-      expect(truss.height, 50);
+      expect(truss.boundingBox.length, closeTo(40, 1e-6));
+      expect(truss.boundingBox.width, closeTo(60, 1e-6));
+      expect(truss.boundingBox.height, closeTo(50, 1e-6));
     });
 
-    test('Returns zero size when every referenced glb is invalid', () {
+    test('Returns a zero box when every referenced glb is invalid', () {
       final ctx = buildContext(
         symdefs: {
           'symdef-a': ['broken.glb'],
@@ -243,9 +250,91 @@ void main() {
 
       final truss = MVRTruss.fromNode(ctx, trussNode(symdefIds: ['symdef-a']));
 
-      expect(truss.length, 0);
-      expect(truss.width, 0);
-      expect(truss.height, 0);
+      expect(truss.boundingBox.length, 0);
+      expect(truss.boundingBox.width, 0);
+      expect(truss.boundingBox.height, 0);
+    });
+  });
+
+  group('MVRTruss world-space bounding box', () {
+    // A 2 m x 0.2 m x 0.2 m glb whose geometry origin is at a corner: X in
+    // [0, 2], Y (height) in [0, 0.2], Z (depth) in [0, 0.2] metres.
+    GLB beam() => GLB(
+          fileId: 'beam',
+          minX: 0, minY: 0, minZ: 0,
+          maxX: 2, maxY: 0.2, maxZ: 0.2,
+        );
+
+    Context beamContext() => buildContext(
+          symdefs: {
+            'symdef-a': ['beam.glb'],
+          },
+          glbs: {'beam': beam()},
+        );
+
+    test('With an identity matrix, corners sit in truss-local mm space', () {
+      final truss =
+          MVRTruss.fromNode(beamContext(), trussNode(symdefIds: ['symdef-a']));
+      final box = truss.boundingBox;
+
+      // (x, y, z)_gltf -> (x, -z, y) * 1000. Depth [0, 0.2] m -> Y [-200, 0] mm.
+      expect(box.min.x, closeTo(0, 1e-6));
+      expect(box.max.x, closeTo(2000, 1e-6));
+      expect(box.min.y, closeTo(-200, 1e-6));
+      expect(box.max.y, closeTo(0, 1e-6));
+      expect(box.min.z, closeTo(0, 1e-6));
+      expect(box.max.z, closeTo(200, 1e-6));
+      expect(box.corners.length, 8);
+    });
+
+    test('center is the midpoint of the world box, and shifts with translation',
+        () {
+      final matrix = MVRMatrix([
+        [1, 0, 0],
+        [0, 1, 0],
+        [0, 0, 1],
+        [1000, 2000, 3000],
+      ]);
+
+      final truss = MVRTruss.fromNode(
+        beamContext(),
+        trussNode(
+          symdefIds: ['symdef-a'],
+          extraChildren: [MatrixValueNode(matrix)],
+        ),
+      );
+
+      // Local centre: X 1000, Y -100, Z 100. Plus translation.
+      expect(truss.center.x, closeTo(1000 + 1000, 1e-6));
+      expect(truss.center.y, closeTo(-100 + 2000, 1e-6));
+      expect(truss.center.z, closeTo(100 + 3000, 1e-6));
+      expect(truss.center, equals(truss.boundingBox.center));
+    });
+
+    test('A 90-degree rotation about Z swaps the world length and width', () {
+      // Rotating the long (X) axis onto Y makes the world-aligned box's X
+      // extent equal the old width and its Y extent equal the old length.
+      final matrix = MVRMatrix([
+        [0, 1, 0],
+        [-1, 0, 0],
+        [0, 0, 1],
+        [0, 0, 0],
+      ]);
+
+      final truss = MVRTruss.fromNode(
+        beamContext(),
+        trussNode(
+          symdefIds: ['symdef-a'],
+          extraChildren: [MatrixValueNode(matrix)],
+        ),
+      );
+      final box = truss.boundingBox;
+
+      // Local extents were length 2000 (X), width 200 (Y). After the rotation
+      // they are swapped on the world axes; height (Z) is unchanged.
+      expect(box.length, closeTo(200, 1e-6));
+      expect(box.width, closeTo(2000, 1e-6));
+      expect(box.height, closeTo(200, 1e-6));
     });
   });
 

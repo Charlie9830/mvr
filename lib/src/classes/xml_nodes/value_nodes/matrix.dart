@@ -1,3 +1,4 @@
+import 'package:mvr/src/classes/mvr_vector3.dart';
 import 'package:mvr/src/classes/xml_nodes/base/mvr_value_node.dart';
 import 'package:collection/collection.dart';
 import 'package:xml/xml.dart';
@@ -49,6 +50,28 @@ class MVRMatrix {
   /// The rotation around the Z axis in degrees.
   double get rotationZ =>
       math.atan2(matrix[0][1], matrix[0][0]) * 180 / math.pi;
+
+  /// Transforms a point from the matrix's local space into world space.
+  ///
+  /// The MVR matrix stores the three basis vectors in rows 0-2 and the
+  /// translation in row 3, so a local point maps to
+  /// `local.x * row0 + local.y * row1 + local.z * row2 + translation`.
+  MVRVector3 transform(MVRVector3 local) {
+    return MVRVector3(
+      local.x * matrix[0][0] +
+          local.y * matrix[1][0] +
+          local.z * matrix[2][0] +
+          matrix[3][0],
+      local.x * matrix[0][1] +
+          local.y * matrix[1][1] +
+          local.z * matrix[2][1] +
+          matrix[3][1],
+      local.x * matrix[0][2] +
+          local.y * matrix[1][2] +
+          local.z * matrix[2][2] +
+          matrix[3][2],
+    );
+  }
 
   @override
   String toString() {

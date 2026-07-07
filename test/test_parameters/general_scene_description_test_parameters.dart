@@ -54,27 +54,55 @@ class TrussTestParameters {
   /// Number of `Truss` graphic objects across all layers.
   final int trussCount;
 
-  /// Name shared by both trusses in the file.
-  final String trussName;
-
-  /// UUIDs of the two trusses, in document order.
-  final List<String> trussUuids;
-
-  /// Expected resolved size of each truss (the union bounding box of all
-  /// referenced glb geometry). Length maps from the union's X extent, width
-  /// from Z, height from Y.
-  final double expectedLength;
-  final double expectedWidth;
-  final double expectedHeight;
+  /// Expected data for each truss in the scene, keyed by UUID.
+  final List<ExpectedTruss> trusses;
 
   TrussTestParameters({
     required this.filePath,
     required this.layerCount,
     required this.trussCount,
-    required this.trussName,
-    required this.trussUuids,
-    required this.expectedLength,
-    required this.expectedWidth,
-    required this.expectedHeight,
+    required this.trusses,
+  });
+
+  ExpectedTruss trussByUuid(String uuid) =>
+      trusses.firstWhere((t) => t.uuid == uuid);
+}
+
+/// Expected properties of a single truss, used by the end-to-end tests.
+///
+/// Sizes and centre are the world-space, axis-aligned bounding box (MVR
+/// convention: right-handed, Z-up, mm) resolved from the referenced glb
+/// geometry and transformed by the truss matrix.
+class ExpectedTruss {
+  final String uuid;
+  final String name;
+
+  /// Matrix translation (mm).
+  final double matrixX;
+  final double matrixY;
+  final double matrixZ;
+
+  /// World-aligned bounding box extents (mm).
+  final double length;
+  final double width;
+  final double height;
+
+  /// World-space bounding box centre (mm).
+  final double centerX;
+  final double centerY;
+  final double centerZ;
+
+  const ExpectedTruss({
+    required this.uuid,
+    required this.name,
+    required this.matrixX,
+    required this.matrixY,
+    required this.matrixZ,
+    required this.length,
+    required this.width,
+    required this.height,
+    required this.centerX,
+    required this.centerY,
+    required this.centerZ,
   });
 }

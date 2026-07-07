@@ -2,6 +2,8 @@ import 'dart:math' as math;
 
 import 'package:collection/collection.dart';
 import 'package:mvr/src/classes/mvr_addresses.dart';
+import 'package:mvr/src/classes/mvr_bounding_box.dart';
+import 'package:mvr/src/classes/mvr_vector3.dart';
 import 'package:mvr/src/classes/xml_nodes/base/mvr_node.dart';
 import 'package:mvr/src/classes/xml_nodes/base/mvr_value_container.dart';
 import 'package:mvr/src/classes/xml_nodes/base/mvr_value_node.dart';
@@ -274,16 +276,14 @@ class MVRTruss extends MVRGraphicObject {
 
   final MVRMatrix matrix;
   final String classing;
-  final double length;
-  final double width;
-  final double height;
 
-  /// Offset of the geometry's bounding-box centre from the matrix origin, along
-  /// the truss length, width and height axes respectively. Add these (rotated by
-  /// the matrix) to the translation to obtain the geometric centre.
-  final double offsetLength;
-  final double offsetWidth;
-  final double offsetHeight;
+  /// The world-space, axis-aligned bounding box enclosing the truss geometry.
+  ///
+  /// Coordinates follow the MVR specification: right-handed, Z-up, 1 unit = 1
+  /// mm. The box is derived by unioning the referenced glb geometry, converting
+  /// from glTF space (Y-up, metres) into MVR space (Z-up, mm), transforming the
+  /// eight corners by [matrix], and taking the world-aligned bounds.
+  final MVRBoundingBox boundingBox;
 
   MVRTruss({
     required this.uuid,
@@ -291,16 +291,20 @@ class MVRTruss extends MVRGraphicObject {
     required this.multipatch,
     required this.matrix,
     required this.classing,
-    required this.width,
-    required this.height,
-    required this.length,
-    this.offsetLength = 0,
-    this.offsetWidth = 0,
-    this.offsetHeight = 0,
+    required this.boundingBox,
   });
 
+  /// The centre of the truss's world-space bounding box (mm).
+  MVRVector3 get center => boundingBox.center;
+
   factory MVRTruss.fromNode(Context ctx, TrussNode node) {
-    final size = _lookupSize(ctx, node);
+    final matrix =
+        MVRGraphicObject.extractValueNodeData<MatrixValueNode, MVRMatrix>(
+          node.children,
+          const MVRMatrix.identity(),
+        );
+
+    final localCorners = _localCorners(ctx, node);
 
     return MVRTruss(
       uuid: node.uuid,
@@ -311,25 +315,26 @@ class MVRTruss extends MVRGraphicObject {
             node.children,
             "",
           ),
-      matrix: MVRGraphicObject.extractValueNodeData<MatrixValueNode, MVRMatrix>(
-        node.children,
-        const MVRMatrix.identity(),
-      ),
-      length: size.length,
-      width: size.width,
-      height: size.height,
-      offsetLength: size.offsetLength,
-      offsetWidth: size.offsetWidth,
-      offsetHeight: size.offsetHeight,
+      matrix: matrix,
+      boundingBox:
+          localCorners.isEmpty
+              ? MVRBoundingBox.zero
+              : MVRBoundingBox.fromWorldPoints(
+                localCorners.map(matrix.transform),
+              ),
     );
   }
 
-  static _TrussSize _lookupSize(Context ctx, TrussNode truss) {
+  /// Resolves the eight corners of the truss geometry's bounding box in MVR
+  /// truss-local space (right-handed, Z-up, mm), before the [matrix] transform.
+  ///
+  /// Returns an empty list when no valid geometry can be resolved.
+  static List<MVRVector3> _localCorners(Context ctx, TrussNode truss) {
     final geometriesNode =
         truss.children.whereType<GeometriesNode>().firstOrNull;
 
     if (geometriesNode == null) {
-      return _TrussSize.zero;
+      return const [];
     }
 
     final symDefIds = geometriesNode.children.whereType<SymbolNode>().map(
@@ -345,7 +350,7 @@ class MVRTruss extends MVRGraphicObject {
             .toList();
 
     if (glbFileNames.isEmpty) {
-      return _TrussSize.zero;
+      return const [];
     }
 
     final glbs =
@@ -356,7 +361,7 @@ class MVRTruss extends MVRGraphicObject {
             .toList();
 
     if (glbs.isEmpty) {
-      return _TrussSize.zero;
+      return const [];
     }
 
     // A truss can reference several geometry files (e.g. a main beam plus end
@@ -369,50 +374,17 @@ class MVRTruss extends MVRGraphicObject {
     final maxY = glbs.map((glb) => glb.maxY).reduce(math.max);
     final maxZ = glbs.map((glb) => glb.maxZ).reduce(math.max);
 
-    // The glb bounds are in glTF space (right-handed, Y-up); MVR is right-handed
-    // Z-up. Map the extents to Length (glTF X), Width (glTF Z) and Height
-    // (glTF Y). The matrix translation locates the geometry's local origin,
-    // which is not generally the bounding-box centre, so also report the centre
-    // offset in MVR truss-local axes for callers to re-anchor to the centre.
-    //
-    // The Y-up -> Z-up conversion is (x, y, z) -> (x, -z, y), so the width axis
-    // (glTF Z) maps to MVR -Y: negate the width offset accordingly.
-    return _TrussSize(
-      length: maxX - minX,
-      width: maxZ - minZ,
-      height: maxY - minY,
-      offsetLength: (minX + maxX) / 2,
-      offsetWidth: -(minZ + maxZ) / 2,
-      offsetHeight: (minY + maxY) / 2,
-    );
+    // The glb bounds are in glTF space (right-handed, Y-up, metres); MVR is
+    // right-handed, Z-up, mm. Convert each corner with
+    // (x, y, z) -> (x, -z, y) * 1000 and return all eight so the matrix can
+    // rotate them before we recompute the world-aligned bounds.
+    MVRVector3 corner(double gx, double gy, double gz) =>
+        MVRVector3(gx * 1000, -gz * 1000, gy * 1000);
+
+    return [
+      for (final gx in [minX, maxX])
+        for (final gy in [minY, maxY])
+          for (final gz in [minZ, maxZ]) corner(gx, gy, gz),
+    ];
   }
-}
-
-/// Resolved physical size of a truss and the offset of its geometry centre from
-/// the matrix origin, both in the (length, width, height) axis convention.
-class _TrussSize {
-  final double length;
-  final double width;
-  final double height;
-  final double offsetLength;
-  final double offsetWidth;
-  final double offsetHeight;
-
-  const _TrussSize({
-    required this.length,
-    required this.width,
-    required this.height,
-    required this.offsetLength,
-    required this.offsetWidth,
-    required this.offsetHeight,
-  });
-
-  static const zero = _TrussSize(
-    length: 0,
-    width: 0,
-    height: 0,
-    offsetLength: 0,
-    offsetWidth: 0,
-    offsetHeight: 0,
-  );
 }
