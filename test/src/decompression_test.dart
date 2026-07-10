@@ -8,12 +8,12 @@ void main() async {
   test('MVR File Decompression', () async {
     final result = await expandMvrFile(
       File(generalMvrTestParameters.filePath),
-      expandGdtfFiles: true,
+      parseGdtfFiles: true,
     );
     expect(
-      result.gdtfFiles.length,
+      result.gdtfFixtureTypes.length,
       8,
-      reason: 'Unexpected number of GDTF files decompressed',
+      reason: 'Unexpected number of GDTF fixture types parsed',
     );
     expect(
       result.generalSceneDescription.isNotEmpty,

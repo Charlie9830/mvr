@@ -72,30 +72,30 @@ void main() async {
   group('Testing for correct MVR class state after read() function.', () {
     test('Testing that GDTF files are correctly ignored', () async {
       final mvr = MVR(filePath: generalMvrTestParameters.filePath);
-      await mvr.read(expandGdtfFiles: false);
+      await mvr.read(parseGdtfFiles: false);
 
       expect(
-        mvr.gdtfContents.length,
+        mvr.gdtfFixtureTypes.length,
         0,
         reason:
-            'MVR.gdtfContents.length was not zero when no gdtf files should have been expanded',
+            'MVR.gdtfFixtureTypes.length was not zero when no gdtf files should have been parsed',
       );
     });
 
-    test('Testing that GDTF files are expanded as expected', () async {
+    test('Testing that GDTF files are parsed as expected', () async {
       final mvr = MVR(filePath: generalMvrTestParameters.filePath);
-      await mvr.read(expandGdtfFiles: true);
+      await mvr.read(parseGdtfFiles: true);
 
       expect(
-        mvr.gdtfContents.length,
+        mvr.gdtfFixtureTypes.length,
         generalMvrTestParameters.gdtfFileCount,
-        reason: 'MVR.gdtfContents.length did not match the expected count',
+        reason: 'MVR.gdtfFixtureTypes.length did not match the expected count',
       );
     });
 
     test('Testing that the GSD is intialized.', () async {
       final mvr = MVR(filePath: generalMvrTestParameters.filePath);
-      await mvr.read(expandGdtfFiles: false);
+      await mvr.read(parseGdtfFiles: false);
 
       expect(
         mvr.generalSceneDescription.layers.length,
@@ -110,7 +110,7 @@ void main() async {
       'Test that the correct number of Fixtures have been initialized.',
       () async {
         final mvr = MVR(filePath: generalMvrTestParameters.filePath);
-        await mvr.read(expandGdtfFiles: false);
+        await mvr.read(parseGdtfFiles: false);
 
         expect(
           mvr.generalSceneDescription.layers
@@ -124,7 +124,7 @@ void main() async {
 
     test('Test that each Fixture has a unique UUID', () async {
       final mvr = MVR(filePath: generalMvrTestParameters.filePath);
-      await mvr.read(expandGdtfFiles: false);
+      await mvr.read(parseGdtfFiles: false);
 
       expect(
         mvr.generalSceneDescription.layers
@@ -140,7 +140,7 @@ void main() async {
 
     test('Test that each Fixture has a unique FixtureID', () async {
       final mvr = MVR(filePath: generalMvrTestParameters.filePath);
-      await mvr.read(expandGdtfFiles: false);
+      await mvr.read(parseGdtfFiles: false);
 
       expect(
         mvr.generalSceneDescription.layers
@@ -156,7 +156,7 @@ void main() async {
 
     test('Test that every fixture has a valid DMX address', () async {
       final mvr = MVR(filePath: generalMvrTestParameters.filePath);
-      await mvr.read(expandGdtfFiles: false);
+      await mvr.read(parseGdtfFiles: false);
 
       expect(
         mvr.generalSceneDescription.layers
@@ -172,7 +172,7 @@ void main() async {
 
     test('Test that fixtures have mostly correct gdtf references', () async {
       final mvr = MVR(filePath: generalMvrTestParameters.filePath);
-      await mvr.read(expandGdtfFiles: false);
+      await mvr.read(parseGdtfFiles: false);
 
       expect(
         mvr.generalSceneDescription.layers
@@ -189,7 +189,7 @@ void main() async {
 
     test('Test that the first fixture has the correct properties', () async {
       final mvr = MVR(filePath: generalMvrTestParameters.filePath);
-      await mvr.read(expandGdtfFiles: false);
+      await mvr.read(parseGdtfFiles: false);
 
       final fixture =
           mvr.generalSceneDescription.layers
@@ -225,7 +225,7 @@ void main() async {
   group("Test Parsing of Groups", () {
     test("Testing Fixture Grouping Functionality", () async {
       final mvr = MVR(filePath: groupingGsdTestParams.filePath);
-      await mvr.read(expandGdtfFiles: false);
+      await mvr.read(parseGdtfFiles: false);
 
       final layerCount = mvr.generalSceneDescription.layers.length;
 
@@ -265,7 +265,7 @@ void main() async {
   group("Test implementation of Matrix Node", () {
     test("Testing Matrix node parsing.", () async {
       final mvr = MVR(filePath: matrixTestParams.filePath);
-      await mvr.read(expandGdtfFiles: false);
+      await mvr.read(parseGdtfFiles: false);
 
       final fixture =
           mvr.generalSceneDescription.layers.first.children.first as MVRFixture;

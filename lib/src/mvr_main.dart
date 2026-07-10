@@ -1,7 +1,9 @@
 import 'dart:io';
 
 import 'package:archive/archive.dart';
+import 'package:mvr/src/classes/gdtf/gdtf_fixture_type.dart';
 import 'package:mvr/src/classes/glb.dart';
+import 'package:mvr/src/classes/mvr_graphic_objects.dart';
 import 'package:mvr/src/context.dart';
 import 'package:mvr/src/decompression.dart';
 import 'package:mvr/errors/file_not_found_error.dart';
@@ -12,8 +14,17 @@ import 'package:mvr/src/parse_general_scene_description.dart';
 
 class MVR {
   final String filePath;
-  Map<String, String> gdtfContents = {};
+
+  /// The GDTF fixture types embedded in the archive, keyed by their file name
+  /// (e.g. 'Clay Paky@Sharpy.gdtf'). Populated by [read] unless
+  /// `parseGdtfFiles` is false.
+  ///
+  /// An MVR `Fixture` refers to its fixture type by file name — usually
+  /// without the extension — so prefer [fixtureTypeOf] or [fixtureTypeByName]
+  /// over indexing this map directly.
+  Map<String, GDTFFixtureType> gdtfFixtureTypes = {};
   Map<String, GLB> glbs = {};
+  Map<String, GDTFFixtureType> _fixtureTypesByNormalizedName = {};
   late MVRGeneralSceneDescription _generalSceneDescription;
   bool _initialized = false;
 
@@ -24,7 +35,28 @@ class MVR {
 
   MVR({required this.filePath});
 
-  Future<bool> read({bool expandGdtfFiles = true}) async {
+  /// The GDTF fixture type referenced by [fixture]'s `GDTFSpec` value, or
+  /// null when the archive does not contain a matching (parseable) GDTF file.
+  GDTFFixtureType? fixtureTypeOf(MVRFixture fixture) =>
+      fixtureTypeByName(fixture.gdtfSpec);
+
+  /// Looks up a fixture type by GDTF spec name, tolerating the `.gdtf`
+  /// extension being present or absent and case differences — MVR files in
+  /// the wild write `GDTFSpec` values both ways.
+  GDTFFixtureType? fixtureTypeByName(String gdtfSpec) =>
+      _fixtureTypesByNormalizedName[_normalizeGdtfSpecName(gdtfSpec)];
+
+  static String _normalizeGdtfSpecName(String name) {
+    var normalized = name.trim().toLowerCase();
+
+    if (normalized.endsWith('.gdtf')) {
+      normalized = normalized.substring(0, normalized.length - '.gdtf'.length);
+    }
+
+    return normalized;
+  }
+
+  Future<bool> read({bool parseGdtfFiles = true}) async {
     if (filePath.isEmpty) {
       throw MvrInvalidFilePathError(filePath);
     }
@@ -38,9 +70,13 @@ class MVR {
     try {
       final decompressionResult = await expandMvrFile(
         file,
-        expandGdtfFiles: expandGdtfFiles,
+        parseGdtfFiles: parseGdtfFiles,
       );
-      gdtfContents = decompressionResult.gdtfFiles;
+      gdtfFixtureTypes = decompressionResult.gdtfFixtureTypes;
+      _fixtureTypesByNormalizedName = {
+        for (final entry in gdtfFixtureTypes.entries)
+          _normalizeGdtfSpecName(entry.key): entry.value,
+      };
       glbs = decompressionResult.glbs;
       final intermediateGsd = parseGeneralSceneDescription(
         decompressionResult.generalSceneDescription,

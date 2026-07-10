@@ -64,6 +64,38 @@ class MVRMatrix {
   /// The world-space direction of the local Z (height) axis.
   MVRVector3 get zAxis => MVRVector3(matrix[2][0], matrix[2][1], matrix[2][2]);
 
+  /// Transforms a direction from the matrix's local space into world space.
+  ///
+  /// Identical to [transform] but without the translation component, so it is
+  /// suitable for direction vectors rather than points.
+  MVRVector3 transformDirection(MVRVector3 local) {
+    return MVRVector3(
+      local.x * matrix[0][0] + local.y * matrix[1][0] + local.z * matrix[2][0],
+      local.x * matrix[0][1] + local.y * matrix[1][1] + local.z * matrix[2][1],
+      local.x * matrix[0][2] + local.y * matrix[1][2] + local.z * matrix[2][2],
+    );
+  }
+
+  /// Composes this matrix with [child], returning the matrix that first
+  /// applies [child] and then this matrix:
+  /// `result.transform(p) == transform(child.transform(p))`.
+  ///
+  /// Used to accumulate transforms while walking nested geometry trees, where
+  /// [child] is the transform of a node relative to its parent (this matrix).
+  MVRMatrix multiply(MVRMatrix child) {
+    final bx = transformDirection(child.xAxis);
+    final by = transformDirection(child.yAxis);
+    final bz = transformDirection(child.zAxis);
+    final t = transform(MVRVector3(child.x, child.y, child.z));
+
+    return MVRMatrix([
+      [bx.x, bx.y, bx.z],
+      [by.x, by.y, by.z],
+      [bz.x, bz.y, bz.z],
+      [t.x, t.y, t.z],
+    ]);
+  }
+
   /// Transforms a point from the matrix's local space into world space.
   ///
   /// The MVR matrix stores the three basis vectors in rows 0-2 and the

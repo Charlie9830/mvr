@@ -8,12 +8,14 @@ import 'package:mvr/src/archive_expand_result.dart';
 import 'package:archive/archive.dart';
 import 'package:mvr/errors/malformed_general_scene_description_errror.dart';
 import 'package:mvr/errors/missing_general_scene_description_error.dart';
+import 'package:mvr/src/classes/gdtf/gdtf_fixture_type.dart';
 import 'package:mvr/src/classes/glb.dart';
+import 'package:mvr/src/gdtf/gdtf_decompression.dart';
 import 'package:path/path.dart' as p;
 
 Future<ArchiveExpandResult> expandMvrFile(
   File file, {
-  bool expandGdtfFiles = true,
+  bool parseGdtfFiles = true,
 }) {
   return Isolate.run<ArchiveExpandResult>(() async {
     final decoder = ZipDecoder();
@@ -35,18 +37,27 @@ Future<ArchiveExpandResult> expandMvrFile(
       throw MalformedGeneralSceneDescriptionErrror();
     }
 
-    final Map<String, String> gdtfFileContents = {};
-    if (expandGdtfFiles) {
+    final Map<String, GDTFFixtureType> gdtfFixtureTypes = {};
+    if (parseGdtfFiles) {
       final gdtfFiles = archive.files.where(
-        (file) => file.name.contains('.gdtf'),
+        (file) => p.extension(file.name).toLowerCase() == '.gdtf',
       );
 
-      gdtfFileContents.addEntries(
-        gdtfFiles.map(
-          (file) =>
-              MapEntry(file.name, String.fromCharCodes(file.content ?? [])),
-        ),
-      );
+      for (final file in gdtfFiles) {
+        final bytes = file.readBytes();
+
+        if (bytes == null) {
+          continue;
+        }
+
+        try {
+          gdtfFixtureTypes[file.name] = parseGdtfArchive(bytes);
+        } catch (e) {
+          // A fixture type that fails to parse should not prevent the rest of
+          // the MVR file from being read; its geometry is simply unavailable.
+          continue;
+        }
+      }
     }
 
     final glbFiles = archive.files.where(
@@ -68,7 +79,7 @@ Future<ArchiveExpandResult> expandMvrFile(
 
     return ArchiveExpandResult(
       generalSceneDescription: gsdContents,
-      gdtfFiles: gdtfFileContents,
+      gdtfFixtureTypes: gdtfFixtureTypes,
       glbs: glbs,
     );
   });

@@ -19,7 +19,7 @@ void main() {
 
     setUp(() async {
       mvr = MVR(filePath: trussTestParams.filePath);
-      await mvr.read(expandGdtfFiles: false);
+      await mvr.read(parseGdtfFiles: false);
     });
 
     test('Reads the expected number of layers', () {
