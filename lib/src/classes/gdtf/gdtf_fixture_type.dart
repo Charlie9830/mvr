@@ -3,15 +3,17 @@ import 'package:mvr/src/classes/gdtf/gdtf_dmx_mode.dart';
 import 'package:mvr/src/classes/gdtf/gdtf_geometry.dart';
 import 'package:mvr/src/classes/gdtf/gdtf_geometry_part.dart';
 import 'package:mvr/src/classes/gdtf/gdtf_model.dart';
+import 'package:mvr/src/classes/gdtf/gdtf_wiring_object.dart';
 import 'package:mvr/src/classes/mvr_bounding_box.dart';
 import 'package:mvr/src/classes/xml_nodes/value_nodes/matrix.dart';
 
 /// A GDTF fixture type, reduced to identity metadata and physical geometry.
 ///
 /// This is the parsed form of a `.gdtf` file's description.xml, covering the
-/// `FixtureType` attributes plus its `Models`, `Geometries` and (geometry
-/// binding only) `DMXModes` collects. Wheels, channels, physical descriptions
-/// and textures are out of scope.
+/// `FixtureType` attributes plus its `Models`, `Geometries` (including
+/// `WiringObject` connections) and (geometry binding only) `DMXModes`
+/// collects. Wheels, channels, physical descriptions and textures are out of
+/// scope.
 ///
 /// All geometry is expressed in MVR conventions — right-handed, Z-up,
 /// 1 unit = 1 mm — in fixture-local space, with the origin at the centre of
@@ -56,9 +58,18 @@ class GDTFFixtureType {
   /// Zero when the fixture type contains no usable geometry.
   final MVRBoundingBox boundingBox;
 
+  /// The fixture's wiring objects (power, data and network connections) with
+  /// accumulated fixture-local transforms.
+  ///
+  /// Flattened from the same default geometry tree as [parts]. Use
+  /// [wiringObjectsForMode] when the fixture's `GDTFMode` is known.
+  final List<GDTFWiringObjectInstance> wiringObjects;
+
   final Map<String, GDTFGeometry> _topLevelGeometryByName;
   final Map<String, List<GDTFGeometryPart>> _partsByRootName;
   final Map<String, MVRBoundingBox> _boundsByRootName;
+  final Map<String, List<GDTFWiringObjectInstance>> _wiringObjectsByRootName;
+  final Map<String, GDTFWiringObject> _wiringObjectByName;
 
   GDTFFixtureType._({
     required this.dataVersion,
@@ -74,12 +85,18 @@ class GDTFFixtureType {
     required this.dmxModes,
     required this.parts,
     required this.boundingBox,
+    required this.wiringObjects,
     required Map<String, GDTFGeometry> topLevelGeometryByName,
     required Map<String, List<GDTFGeometryPart>> partsByRootName,
     required Map<String, MVRBoundingBox> boundsByRootName,
+    required Map<String, List<GDTFWiringObjectInstance>>
+    wiringObjectsByRootName,
+    required Map<String, GDTFWiringObject> wiringObjectByName,
   }) : _topLevelGeometryByName = topLevelGeometryByName,
        _partsByRootName = partsByRootName,
-       _boundsByRootName = boundsByRootName;
+       _boundsByRootName = boundsByRootName,
+       _wiringObjectsByRootName = wiringObjectsByRootName,
+       _wiringObjectByName = wiringObjectByName;
 
   factory GDTFFixtureType({
     String dataVersion = '',
@@ -98,10 +115,18 @@ class GDTFFixtureType {
       for (final geometry in geometries) geometry.name: geometry,
     };
 
-    final partsByRootName = {
+    final flattenedByRootName = {
       for (final geometry in geometries)
         geometry.name: _flatten(geometry, topLevelByName),
     };
+
+    final partsByRootName = flattenedByRootName.map(
+      (name, flattened) => MapEntry(name, flattened.parts),
+    );
+
+    final wiringObjectsByRootName = flattenedByRootName.map(
+      (name, flattened) => MapEntry(name, flattened.wiringObjects),
+    );
 
     final boundsByRootName = partsByRootName.map(
       (name, parts) => MapEntry(name, _boundsOf(parts)),
@@ -110,14 +135,17 @@ class GDTFFixtureType {
     // The default geometry: the tree bound to the first DMX mode that
     // resolves. When no mode resolves (or none exist), fall back to every
     // top-level tree so files without modes still report their geometry.
-    final defaultRoot =
-        dmxModes
-            .map((mode) => partsByRootName[mode.geometryName])
-            .nonNulls
-            .firstOrNull;
+    final defaultRootName = dmxModes
+        .map((mode) => mode.geometryName)
+        .firstWhereOrNull(flattenedByRootName.containsKey);
 
     final parts =
-        defaultRoot ?? partsByRootName.values.flattened.toList();
+        partsByRootName[defaultRootName] ??
+        partsByRootName.values.flattened.toList();
+
+    final wiringObjects =
+        wiringObjectsByRootName[defaultRootName] ??
+        wiringObjectsByRootName.values.flattened.toList();
 
     return GDTFFixtureType._(
       dataVersion: dataVersion,
@@ -133,9 +161,15 @@ class GDTFFixtureType {
       dmxModes: dmxModes,
       parts: parts,
       boundingBox: _boundsOf(parts),
+      wiringObjects: wiringObjects,
       topLevelGeometryByName: topLevelByName,
       partsByRootName: partsByRootName,
       boundsByRootName: boundsByRootName,
+      wiringObjectsByRootName: wiringObjectsByRootName,
+      wiringObjectByName: {
+        for (final wiringObject in geometries.expand(_wiringObjectsIn))
+          wiringObject.name: wiringObject,
+      },
     );
   }
 
@@ -167,24 +201,57 @@ class GDTFFixtureType {
     return _boundsByRootName[geometryName] ?? boundingBox;
   }
 
-  /// Flattens the tree rooted at [root] into parts with accumulated
-  /// fixture-local transforms, following `GeometryReference` nodes.
+  /// The fixture's wiring objects when patched in [gdtfMode].
+  ///
+  /// Falls back to the default [wiringObjects] when the mode or its geometry
+  /// cannot be resolved.
+  List<GDTFWiringObjectInstance> wiringObjectsForMode(String gdtfMode) {
+    final geometryName = dmxMode(gdtfMode)?.geometryName;
+    return _wiringObjectsByRootName[geometryName] ?? wiringObjects;
+  }
+
+  /// Looks up a wiring object anywhere in the `Geometries` collect by name,
+  /// as referenced by [GDTFPinPatch.toWiringObjectName].
+  GDTFWiringObject? wiringObjectByName(String name) =>
+      _wiringObjectByName[name];
+
+  /// Every wiring object node in the tree rooted at [node], without following
+  /// `GeometryReference` nodes.
+  static Iterable<GDTFWiringObject> _wiringObjectsIn(GDTFGeometry node) => [
+    if (node is GDTFWiringObject) node,
+    ...node.children.expand(_wiringObjectsIn),
+  ];
+
+  /// Flattens the tree rooted at [root] into parts and wiring objects with
+  /// accumulated fixture-local transforms, following `GeometryReference`
+  /// nodes.
   ///
   /// A referenced tree is instantiated at the *reference's* transform (its
   /// own top-level position is ignored, per the GDTF spec the reference
   /// defines where the instance sits). [activeRefs] guards against reference
   /// cycles in malformed files.
-  static List<GDTFGeometryPart> _flatten(
-    GDTFGeometry root,
-    Map<String, GDTFGeometry> topLevelByName,
-  ) {
+  static ({
+    List<GDTFGeometryPart> parts,
+    List<GDTFWiringObjectInstance> wiringObjects,
+  })
+  _flatten(GDTFGeometry root, Map<String, GDTFGeometry> topLevelByName) {
     final parts = <GDTFGeometryPart>[];
+    final wiringObjects = <GDTFWiringObjectInstance>[];
 
     void walk(
       GDTFGeometry node,
       MVRMatrix nodeTransform,
       Set<String> activeRefs,
     ) {
+      if (node is GDTFWiringObject) {
+        wiringObjects.add(
+          GDTFWiringObjectInstance(
+            wiringObject: node,
+            transform: nodeTransform,
+          ),
+        );
+      }
+
       final model = node.model;
       if (model != null) {
         parts.add(
@@ -209,7 +276,7 @@ class GDTFFixtureType {
     }
 
     walk(root, root.position, {root.name});
-    return parts;
+    return (parts: parts, wiringObjects: wiringObjects);
   }
 
   static MVRBoundingBox _boundsOf(List<GDTFGeometryPart> parts) {
@@ -217,8 +284,6 @@ class GDTFFixtureType {
       return MVRBoundingBox.zero;
     }
 
-    return MVRBoundingBox.fromWorldPoints(
-      parts.expand((part) => part.corners),
-    );
+    return MVRBoundingBox.fromWorldPoints(parts.expand((part) => part.corners));
   }
 }

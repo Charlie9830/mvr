@@ -1,3 +1,19 @@
+## Unreleased
+
+* Added GDTF `WiringObject` support.
+  * `WiringObject` geometries are parsed into `GDTFWiringObject` (a
+    `GDTFGeometry` subclass) exposing connector, component and signal
+    types, electrical ratings, fuse data, orientation, wire group and
+    `PinPatch` connections.
+  * `GDTFConnectorType` is a sealed type: `GDTFPredefinedConnectorType` is an
+    enum of the Annex D connector types and `GDTFCustomConnectorType` holds any
+    other value, so switches over it are exhaustive. Predefined values match
+    case-insensitively. `GDTFSignalType` follows the same pattern.
+  * `GDTFFixtureType.wiringObjects` / `wiringObjectsForMode` return wiring
+    objects flattened with fixture-local transforms (resolving
+    `GeometryReference` instances), and `wiringObjectByName` resolves
+    `GDTFPinPatch.toWiringObjectName`.
+
 ## 0.1.0
 
 * Added GDTF fixture type support.

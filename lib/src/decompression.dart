@@ -31,7 +31,7 @@ Future<ArchiveExpandResult> expandMvrFile(
       throw MissingGeneralSceneDescriptionError();
     }
 
-    final gsdContents = String.fromCharCodes(gsd.content ?? []);
+    final gsdContents = String.fromCharCodes(gsd.content);
 
     if (gsdContents.isEmpty) {
       throw MalformedGeneralSceneDescriptionErrror();
@@ -117,8 +117,7 @@ GLB _buildGLB(String id, ByteData data) {
 
     for (final mesh in (gltf['meshes'] as List)) {
       for (final primitive in (mesh['primitives'] as List)) {
-        final accessor =
-            gltf['accessors'][primitive['attributes']['POSITION']];
+        final accessor = gltf['accessors'][primitive['attributes']['POSITION']];
 
         final List<dynamic> min = accessor['min']; // [minX, minY, minZ]
         final List<dynamic> max = accessor['max']; // [maxX, maxY, maxZ]

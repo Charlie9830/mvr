@@ -2,6 +2,9 @@ import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mvr/errors/gdtf_errors.dart';
+import 'package:mvr/src/classes/gdtf/gdtf_connector_type.dart';
+import 'package:mvr/src/classes/gdtf/gdtf_signal_type.dart';
+import 'package:mvr/src/classes/gdtf/gdtf_wiring_object.dart';
 import 'package:mvr/src/classes/mvr_graphic_objects.dart';
 import 'package:mvr/src/gdtf_main.dart';
 import 'package:mvr/src/mvr_main.dart';
@@ -103,23 +106,61 @@ void main() {
       }
     });
 
-    test(
-      'GeometryReference-based battens union their referenced pixels',
-      () {
-        final bar = mvr.fixtureTypeByName('GLP@impression X5ip Bar 1000')!;
+    test('The MAC Aura XIP exposes its wiring objects', () {
+      final aura = mvr.fixtureTypeByName('BLD@Martin MAC Aura XIP')!;
 
-        // The 1m bar body defines the length; lens pixels are instanced
-        // along it via GeometryReference nodes.
-        expect(bar.boundingBox.length, closeTo(1000, 1.0));
-        expect(
-          bar.parts.length,
-          greaterThan(2),
-          reason:
-              'Expected the bar to flatten into multiple parts (body + '
-              'instanced pixels)',
-        );
-      },
-    );
+      final wiring = aura.wiringObjects.map((i) => i.wiringObject).toList();
+      expect(wiring.map((w) => w.name), [
+        'Power IN',
+        'Power THRU',
+        'DMX IN',
+        'DMX THRU',
+        'Ethernet IN',
+        'Ethernet THRU',
+      ]);
+
+      final powerIn = wiring.first;
+      expect(powerIn.componentType, GDTFComponentType.consumer);
+      expect(
+        powerIn.connectorType,
+        GDTFPredefinedConnectorType.powerconTrue1Top,
+      );
+      expect(powerIn.signalType, GDTFPredefinedSignalType.power);
+      expect(powerIn.electricalPayLoad, closeTo(285, 1e-9));
+
+      final dmxIn = wiring[2];
+      expect(dmxIn.componentType, GDTFComponentType.input);
+      expect(dmxIn.connectorType, GDTFPredefinedConnectorType.xlr5);
+      expect(dmxIn.signalType, GDTFPredefinedSignalType.dmx512);
+      expect(dmxIn.pinCount, 5);
+
+      // etherCON is not an Annex D type.
+      final ethernetIn = wiring[4];
+      expect(
+        ethernetIn.connectorType,
+        const GDTFCustomConnectorType('etherCON'),
+      );
+      expect(ethernetIn.signalType, const GDTFCustomSignalType('Ethernet'));
+
+      for (final mode in aura.dmxModes) {
+        expect(aura.wiringObjectsForMode(mode.name).length, 6);
+      }
+    });
+
+    test('GeometryReference-based battens union their referenced pixels', () {
+      final bar = mvr.fixtureTypeByName('GLP@impression X5ip Bar 1000')!;
+
+      // The 1m bar body defines the length; lens pixels are instanced
+      // along it via GeometryReference nodes.
+      expect(bar.boundingBox.length, closeTo(1000, 1.0));
+      expect(
+        bar.parts.length,
+        greaterThan(2),
+        reason:
+            'Expected the bar to flatten into multiple parts (body + '
+            'instanced pixels)',
+      );
+    });
   });
 
   group('Standalone GDTF file reading', () {
@@ -146,10 +187,7 @@ void main() {
 
     test('A blank file path throws GdtfInvalidFilePathError', () async {
       final gdtf = GDTF(filePath: '');
-      await expectLater(
-        gdtf.read(),
-        throwsA(isA<GdtfInvalidFilePathError>()),
-      );
+      await expectLater(gdtf.read(), throwsA(isA<GdtfInvalidFilePathError>()));
     });
 
     test('A missing file throws GdtfFileNotFoundError', () async {
@@ -159,9 +197,12 @@ void main() {
       await expectLater(gdtf.read(), throwsA(isA<GdtfFileNotFoundError>()));
     });
 
-    test('A file that is not a zip archive throws GdtfInvalidFileError', () async {
-      final gdtf = GDTF(filePath: generalMvrTestParameters.invalidFilePath);
-      await expectLater(gdtf.read(), throwsA(isA<GdtfInvalidFileError>()));
-    });
+    test(
+      'A file that is not a zip archive throws GdtfInvalidFileError',
+      () async {
+        final gdtf = GDTF(filePath: generalMvrTestParameters.invalidFilePath);
+        await expectLater(gdtf.read(), throwsA(isA<GdtfInvalidFileError>()));
+      },
+    );
   });
 }
