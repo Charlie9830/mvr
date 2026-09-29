@@ -1,6 +1,6 @@
 name: mvr
 description: "Reads MVR (My Virtual Rig) scene files and GDTF fixture type files, exposing scene structure and fixture/truss geometry."
-version: 0.1.0
+version: 0.2.0
 homepage: https://github.com/charlie9830
 
 environment:
