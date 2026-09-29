@@ -15,3 +15,4 @@ export 'src/classes/gdtf/gdtf_dmx_mode.dart';
 export 'src/classes/gdtf/gdtf_wiring_object.dart';
 export 'src/classes/gdtf/gdtf_connector_type.dart';
 export 'src/classes/gdtf/gdtf_signal_type.dart';
+export 'src/classes/mvr_meta_objects.dart';

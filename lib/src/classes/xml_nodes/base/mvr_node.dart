@@ -1,3 +1,4 @@
+import 'package:mvr/src/classes/xml_nodes/position.dart';
 import 'package:mvr/src/classes/xml_nodes/symbol_node.dart';
 import 'package:mvr/src/classes/xml_nodes/aux_data_node.dart';
 import 'package:mvr/src/classes/xml_nodes/base/unsupported_node.dart';
@@ -19,6 +20,7 @@ import 'package:mvr/src/classes/xml_nodes/value_containers/mappings.dart';
 import 'package:mvr/src/classes/xml_nodes/value_nodes/addesses.dart';
 import 'package:mvr/src/classes/xml_nodes/value_nodes/address_value.dart';
 import 'package:mvr/src/classes/xml_nodes/value_nodes/cast_shadow.dart';
+import 'package:mvr/src/classes/xml_nodes/value_nodes/classing_value_node.dart';
 import 'package:mvr/src/classes/xml_nodes/value_nodes/color_value_node.dart';
 import 'package:mvr/src/classes/xml_nodes/value_nodes/custom_id.dart';
 import 'package:mvr/src/classes/xml_nodes/value_nodes/fixture_id.dart';
@@ -27,6 +29,7 @@ import 'package:mvr/src/classes/xml_nodes/value_nodes/fixture_type_id.dart';
 import 'package:mvr/src/classes/xml_nodes/value_nodes/gdtf_mode.dart';
 import 'package:mvr/src/classes/xml_nodes/value_nodes/gdtf_spec.dart';
 import 'package:mvr/src/classes/xml_nodes/value_nodes/matrix.dart';
+import 'package:mvr/src/classes/xml_nodes/value_nodes/position_reference.dart';
 import 'package:mvr/src/classes/xml_nodes/value_nodes/unit_number.dart';
 import 'package:xml/xml.dart';
 
@@ -57,7 +60,8 @@ abstract class MVRNode {
       'Mappings' => Mappings.from(element),
       'AUXData' => AUXDataNode.from(element),
       'Matrix' => MatrixValueNode.from(element),
-      'Classing' => ClassingNode.from(element),
+      'Class' => ClassNode.from(element),
+      'Classing' => ClassingValueNode.from(element),
       'Color' => ColorValueNode.from(element),
       'SceneObject' => SceneObjectNode.from(element),
       'Truss' => TrussNode.from(element),
@@ -65,6 +69,10 @@ abstract class MVRNode {
       'Geometry3D' => Geometry3dNode.from(element),
       'Geometries' => GeometriesNode.from(element),
       'Symbol' => SymbolNode.from(element),
+      'Position' =>
+        element.innerText.trim().isEmpty
+            ? PositionNode.from(element)
+            : PositionValueNode.from(element),
       _ => UnsupportedNode.from(element),
     };
   }

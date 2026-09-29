@@ -6,6 +6,10 @@ class AUXDataNode extends MVRNode {
 
   AUXDataNode({this.children = const []}) : super("AUXData");
 
+  factory AUXDataNode.empty() {
+    return AUXDataNode();
+  }
+
   factory AUXDataNode.from(XmlElement element) {
     return AUXDataNode(children: MVRNode.mapChildren(element.childElements));
   }

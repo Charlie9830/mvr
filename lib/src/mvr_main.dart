@@ -1,9 +1,11 @@
 import 'dart:io';
 
 import 'package:archive/archive.dart';
+import 'package:collection/collection.dart';
 import 'package:mvr/src/classes/gdtf/gdtf_fixture_type.dart';
 import 'package:mvr/src/classes/glb.dart';
 import 'package:mvr/src/classes/mvr_graphic_objects.dart';
+import 'package:mvr/src/classes/xml_nodes/aux_data_node.dart';
 import 'package:mvr/src/context.dart';
 import 'package:mvr/src/decompression.dart';
 import 'package:mvr/errors/file_not_found_error.dart';
